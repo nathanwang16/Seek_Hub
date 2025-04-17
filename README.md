@@ -52,7 +52,7 @@
 ### 相关论文
 https://ghost.oxen.ai/no-hype-deepseek-r1-reading-list/
 
-里面有十几篇经典文献，包括Deepseek的技术报告，每个人都需要过一遍
+包含了很多经典文献，以及Deepseek的技术报告，每个人都需要过一遍
 
 ### 微调相关的教程和资源：
 
