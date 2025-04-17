@@ -40,7 +40,8 @@ https://medium.com/@haberlah/fine-tuning-ai-large-language-models-llm-for-precis
 LLM长上下文导致精度丢失的问题https://www.linsight.cn/c4da56c0.html
 
 解决方案基本上就是：
-    1.微调使用长文本2.改变模型架构（稀疏注意力机制）
+    1.微调使用长文本
+    2.改变模型架构（稀疏注意力机制）
 
 # 第一轮微调前相关准备：
 
