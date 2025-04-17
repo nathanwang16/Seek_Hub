@@ -27,7 +27,7 @@
 但是希望大家做好心理准备，我们最终的目的是商业化，要把这个软件卖出去，无论过程如何，难度极大
 
 希望大家共勉！
-    
+
 
 ### 微调相关的教程和资源：
 
@@ -56,15 +56,15 @@ LLM长上下文导致精度丢失的问题https://www.linsight.cn/c4da56c0.html
 
 3.微调前的准备：
 
-- 1.准备数据集。数据集的种类以文科书籍为主，包括所有的专业教材、小说、科普书以及无法分类的书籍。目前训练的科目不包括数学和物理。数据集同时需要加入少量诗歌。训练数据基本来源于Z-library。第一轮的数据量在100本书左右。第一轮的数据集暂定是各人文领域的基础教材30本+诗歌10本+小说30本+科普书30本
+- 准备数据集。数据集的种类以文科书籍为主，包括所有的专业教材、小说、科普书以及无法分类的书籍。目前训练的科目不包括数学和物理。数据集同时需要加入少量诗歌。训练数据基本来源于Z-library。第一轮的数据量在100本书左右。第一轮的数据集暂定是各人文领域的基础教材30本+诗歌10本+小说30本+科普书30本
       
-- 2.编写爬虫程序去Zlib上大批量下载。如果遭到反爬导致下载失败，需要所有人一起去手动下载。到时候我会开通一个无限制下载的账号。
+- 编写爬虫程序去Zlib上大批量下载。如果遭到反爬导致下载失败，需要所有人一起去手动下载。到时候我会开通一个无限制下载的账号。
   
-- 3.统一数据格式，把不同类型的文件（pdf/txt/epub等）转化成统一的格式（txt）
+- 统一数据格式，把不同类型的文件（pdf/txt/epub等）转化成统一的格式（txt）
   
-- 4.对翻译文本进行分段，每段长度8k字
+- 对翻译文本进行分段，每段长度8k字
   
-- 5.中英翻译配对，校对，再做成数据集的格式
+- 中英翻译配对，校对，再做成数据集的格式
 
 
 ### 翻译质量评估的任务：
@@ -80,7 +80,7 @@ LLM长上下文导致精度丢失的问题https://www.linsight.cn/c4da56c0.html
     
     1. 词汇重叠指标
        
-  1.1 BLEU
+      1.1 BLEU
        
             BLEU（Bilingual Evaluation Understudy）通过计算候选译文与多个参考译文之间的 n‑gram 重叠率，并结合长度惩罚来打分，是最早也是最广泛使用的自动评估指标之一。
        
@@ -88,7 +88,7 @@ LLM长上下文导致精度丢失的问题https://www.linsight.cn/c4da56c0.html
        
             https://zhuanlan.zhihu.com/p/659633044
        
-  1.2 METEOR
+      1.2 METEOR
        
             METEOR 在考虑 n‑gram 匹配的基础上，进一步引入词干、同义词匹配以及惩罚词序不一致等机制，通常与 BLEU 配合使用，以提高对语义和可读性的敏感度​
        
@@ -96,13 +96,13 @@ LLM长上下文导致精度丢失的问题https://www.linsight.cn/c4da56c0.html
        
     2. 编辑距离与字符级指标
   
-  2.1 TER
+      2.1 TER
        
             TER（Translation Error Rate）通过计算将候选译文变换为参考译文所需的最少插入、删除、替换和移位操作次数，再以参考长度归一化，直接反映译文需要多少改动才能完全匹配参考
        
             https://machinetranslate.org/ter
        
-  2.2 chrF
+      2.2 chrF
        
             chrF（Character‑level F‑score）使用字符级 n‑gram 而非词级 n‑gram，特别适合形态变化丰富的语言，通过字符 n‑gram F1 分数衡量差异，能够更好地捕捉词形变化
        
@@ -110,19 +110,19 @@ LLM长上下文导致精度丢失的问题https://www.linsight.cn/c4da56c0.html
        
     4. 基于语言模型或嵌入的指标
        
-  3.1 BERTScore
+      3.1 BERTScore
        
             BERTScore 利用 BERT 等预训练深度模型提取候选与参考的上下文嵌入，然后计算二者在向量空间的匹配度，能较好地反映语义相似性，弥补了纯 n‑gram 指标对重写、同义替换不敏感的缺陷
        
             https://machinetranslate.org/bertscore
        
-  3.2 YiSi
+      3.2 YiSi
        
             YiSi 是一种统一的语义评估与质量估计指标，通过共享语义表示将评估和预测任务结合，能够在资源丰富或稀缺语言上都获得稳定效果
        
             https://aclanthology.org/W19-5358/
        
-  3.3 BLEURT
+      3.3 BLEURT
        
             BLEURT（Bilingual Evaluation Understudy with Representations from Transformers）在 BERTScore 思路上加入了专门的回归层，并用人工评估数据进行微调，进一步提升了与人工评分的一致性和鲁棒性
        
@@ -132,7 +132,7 @@ LLM长上下文导致精度丢失的问题https://www.linsight.cn/c4da56c0.html
        
      6. 基于学习/监督型指标
         
-  4.1 BARTScore
+      4.1 BARTScore
         
             BARTScore 将评估任务视为“生成”问题：给定候选或参考，使用 BART 模型计算将其“转”回另一侧的概率，分值越高表明译文质量越好，可从流利度、保真度等不同视角评估
         
@@ -140,7 +140,7 @@ LLM长上下文导致精度丢失的问题https://www.linsight.cn/c4da56c0.html
         
             https://paperswithcode.com/paper/bartscore-evaluating-generated-text-as-text
         
-  4.2 Prism
+      4.2 Prism
         
             Prism 利用多语种 NMT 系统作为零样本“释义”模型，将候选译文和参考同源化，通过系统自身对参考的重构能力来打分，在多语言场景表现出色
         
@@ -148,13 +148,13 @@ LLM长上下文导致精度丢失的问题https://www.linsight.cn/c4da56c0.html
         
             https://anwarvic.github.io/machine-translation/Evaluation
         
-  4.3 COMET
+      4.3 COMET
         
             COMET 基于跨编码器（Cross-encoder）架构，结合上下文信息和多个语义层面特征，通过有监督训练来拟合人类判断，是当前 WMT 上表现最好的参考型指标之一
         
             https://github.com/Unbabel/COMET
         
-  4.4 COMET-QE（质量估计）
+      4.4 COMET-QE（质量估计）
         
             COMET-QE 是无参考（reference-free）的质量估计版本，仅基于源文和译文给出质量分，无需参考译文，可用于在线翻译系统的实时评估和监控​
         
@@ -165,3 +165,30 @@ LLM长上下文导致精度丢失的问题https://www.linsight.cn/c4da56c0.html
     人工评审+量化的评估标准，可以综合检验我们的翻译成果。
 
 ### 相关论文
+https://ghost.oxen.ai/no-hype-deepseek-r1-reading-list/
+
+里面有十几篇经典文献，包括Deepseek的技术报告
+
+### 长文本训练的相关问题
+![image](https://github.com/user-attachments/assets/87ee6bb2-4c15-4b48-ae33-1a816bfef79e)
+![image](https://github.com/user-attachments/assets/5db3460e-5478-4585-a4fa-975bf41cf0ce)
+![image](https://github.com/user-attachments/assets/5b010896-315f-4138-9bc5-b6e625c0eb84)
+![image](https://github.com/user-attachments/assets/e4698752-d8da-4d27-aca7-a07682026b27)
+![image](https://github.com/user-attachments/assets/472b45b7-6744-4842-8169-c3251e390034)
+
+
+
+### 后期模型架构相关问题
+![image](https://github.com/user-attachments/assets/dca12d96-1739-40d9-92c6-72e1871a42ca)
+![image](https://github.com/user-attachments/assets/1aa9550b-690e-4568-a0ea-ee552bafa83a)
+![image](https://github.com/user-attachments/assets/117c7a84-61b3-4ffd-a4c7-d257d70b246f)
+![image](https://github.com/user-attachments/assets/ef9bb5cf-f2ae-45ae-92dc-537206251ff8)
+![image](https://github.com/user-attachments/assets/9b7300ae-b5a7-480a-9d7b-00cc888744d6)
+
+
+
+
+
+
+
+
