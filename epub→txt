@@ -1,0 +1,49 @@
+# ----- EPUB ➜ TXT ---------------------------------------------------------
+# extra deps (if not installed yet):
+%pip install ebooklib beautifulsoup4 lxml
+
+import ebooklib
+from ebooklib import epub
+from bs4 import BeautifulSoup        # HTML → text
+# (re, Path, postprocess() are already in your existing script)
+
+def epub_to_txt(epub_path: str, txt_path: str) -> None:
+    """
+    Extract plain text from an EPUB file, run the same post-processing
+    pipeline, and save as UTF-8 .txt.
+
+    Parameters
+    ----------
+    epub_path : str | Path
+        Input .epub file.
+    txt_path  : str | Path
+        Target .txt file.
+    """
+    # read the entire EPUB package
+    book = epub.read_epub(epub_path)
+
+    # concatenate all xhtml/html documents in spine order
+    chunks = []
+    for item in book.get_items_of_type(ebooklib.ITEM_DOCUMENT):
+        soup = BeautifulSoup(item.get_content(), "lxml")
+        chunks.append(soup.get_text(separator="\n"))
+
+    raw_text = "\n\n".join(chunks)
+
+    # reuse your existing postprocess() function
+    cleaned = postprocess(raw_text)
+
+    # save
+    Path(txt_path).write_text(cleaned, encoding="utf-8")
+    print(f"Saved => {txt_path}")
+
+import re
+from pathlib import Path
+from collections import Counter
+
+# sentence-end punctuation (English + Chinese)
+_SENT_END = r"[.!?。！？]"
+
+# repeated-header/footer detection阈值（出现次数 > 总行数 × THRESHOLD 视为噪声）
+_HEADER_THRESHOLD = 0.6
+
