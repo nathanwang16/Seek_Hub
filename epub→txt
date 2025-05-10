@@ -37,6 +37,19 @@ def epub_to_txt(epub_path: str, txt_path: str) -> None:
     Path(txt_path).write_text(cleaned, encoding="utf-8")
     print(f"Saved => {txt_path}")
 
+# ----------  文本清洗 ----------
+
+
+import re
+from pathlib import Path
+from collections import Counter
+
+# 英/中文句末标点，用于判断是否应该合并下一行
+_SENT_END = r"[.!?。！？]"
+
+# 判定“高频页眉/页脚”用的阈值：出现次数 > 总行数 × THRESHOLD 即认为是噪声
+_HEADER_THRESHOLD = 0.6
+
 
 def postprocess(raw: str) -> str:
     """
