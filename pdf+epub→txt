@@ -210,3 +210,21 @@ def postprocess(raw: str) -> str:
     # # text_block = OpenCC("t2s").convert(text_block)
 
     return text_block.strip()
+
+
+
+
+
+
+
+#-----------------main--------------------------------------------#
+#epub
+#检查文件是否存在
+
+from pathlib import Path
+epub_to_txt("北京枪声 (Unknown) (Z-Library).epub", "北京枪声 (Unknown) (Z-Library).epub.txt")
+txt_path = Path("北京枪声 (Unknown) (Z-Library).epub.txt")
+print(txt_path.exists())          # True → 文件确实写好了
+print(txt_path.stat().st_size)    # 文件大小（字节）
+from IPython.display import FileLink
+FileLink(txt_path)      # 点击输出的蓝色链接即可下载
