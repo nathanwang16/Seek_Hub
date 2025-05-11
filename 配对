@@ -1,0 +1,176 @@
+下⾯给出一套 **端到端 Python 流程**，把你已经得到的
+
+```
+📄 English.txt   +   📄 中文.txt
+```
+
+切成「**≈8 k 汉字**」的成段对，并输出为可直接喂进大模型微调的 JSONL 数据集。
+代码按 **清洗 → 句级对齐 → 8 k 拼段 → 格式化输出** 四步组织；所有策略都与 Seek-Hub 指南 *4/5 节* 要求保持一致（句⻓对齐 + 垃圾行清除 + UTF-8 保存）。
+
+---
+
+## 环境依赖
+
+```bash
+# 句子嵌⼊ + 对齐
+pip install -U sentence-transformers torch bertalign tqdm
+
+# 中文断句 + 清洗可选
+pip install opencc-python-reimplemented regex
+
+# NLTK 英文断句
+pip install nltk
+python -m nltk.downloader punkt
+```
+
+* **LaBSE** 多语句向量模型可映射 109 语种到同一空间，适合找翻译对 ([Hugging Face][1], [SentenceTransformers][2])
+* **Bertalign** 封装了「句向量 + 动规」算法，能输出顺序一致的句对 ([GitHub][3], [arXiv][4])
+* 若想用经典长度/词典对齐，也可换 **Hunalign** ([GitHub][5], [Mokk][6], [Nessie][7])
+
+---
+
+## 1 . 文本预清洗（可选）
+
+```python
+import regex as re
+from opencc import OpenCC               # 若需繁→简
+cc = OpenCC("t2s")
+
+def clean_txt(raw: str, lang="zh") -> str:
+    """粗清洗：去 BOM / 控制符 / 多空行 / 简繁转换"""
+    txt = raw.replace("\ufeff", "").replace("\r\n", "\n")          # BOM / CRLF
+    txt = re.sub(r"[\x00-\x09\x0B-\x1F\x7F]", "", txt)             # 控制符
+    txt = re.sub(r"\n{3,}", "\n\n", txt)                           # 折叠空行
+    if lang == "zh":
+        txt = cc.convert(txt)                                      # 繁→简
+    return txt.strip()
+```
+
+> Seek-Hub 第 5 节要求「编码统一 / 去控制符 / 折叠空行」——这里一次性完成。
+> OpenCC 支撑繁简转换 ([GitHub][8], [GitHub][9])
+
+---
+
+## 2 . 句级对齐（LaBSE + Bertalign）
+
+```python
+from bertalign.aligner import Aligner
+import nltk, regex
+nltk.download("punkt")
+aligner = Aligner(model_name="sentence-transformers/LaBSE")  # 会自动下载模型
+
+def split_en(text):                 # NLTK 英文分句
+    return nltk.sent_tokenize(text)
+
+def split_zh(text):                 # 正则中文分句
+    return [s for s in regex.split(r'(?<=[。！？])\s*', text) if s.strip()]
+
+def align_sentences(en_sents, zh_sents):
+    """
+    返回按顺序对应的 [(en_idx, zh_idx)] 列表；Bertalign 内部已做动态规划
+    """
+    pairs = aligner.align(en_sents, zh_sents, threshold=0.5)
+    return pairs
+```
+
+LaBSE 在句对抽取任务上的效果已被多篇研究证实 ([arXiv][4], [aclanthology.org][10])。
+
+---
+
+## 3 . 按 8 k 汉字拼段
+
+```python
+import json, math, uuid
+from pathlib import Path
+from tqdm import tqdm
+
+CHUNK_SIZE = 8_000        # 8k 汉字
+
+def build_dataset(en_path, zh_path, out_jsonl):
+    en_txt = clean_txt(Path(en_path).read_text(), lang="en")
+    zh_txt = clean_txt(Path(zh_path).read_text(), lang="zh")
+
+    en_sents = split_en(en_txt)
+    zh_sents = split_zh(zh_txt)
+
+    pairs = align_sentences(en_sents, zh_sents)
+
+    # —— 按 8k 汉字聚合 —— #
+    buf_en, buf_zh, buf_len = [], [], 0
+    with open(out_jsonl, "w", encoding="utf-8") as fout:
+        for en_idx, zh_idx in tqdm(pairs, desc="拼段"):
+            esent, zsent = en_sents[en_idx], zh_sents[zh_idx]
+            buf_en.append(esent)
+            buf_zh.append(zsent)
+            buf_len += len(zsent)
+
+            if buf_len >= CHUNK_SIZE:
+                record = {
+                    "id": str(uuid.uuid4()),
+                    "english": " ".join(buf_en),
+                    "chinese": "".join(buf_zh)
+                }
+                fout.write(json.dumps(record, ensure_ascii=False) + "\n")
+                buf_en, buf_zh, buf_len = [], [], 0   # reset
+
+        # 收尾不足 8k 的残段（可选丢弃）
+        if buf_en and buf_len > CHUNK_SIZE * 0.3:     # 至少 30% 长度
+            record = {
+                "id": str(uuid.uuid4()),
+                "english": " ".join(buf_en),
+                "chinese": "".join(buf_zh)
+            }
+            fout.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+    print(f"✓ 完成：输出至 {out_jsonl}")
+```
+
+* 段长以「中文字数」计；按 Seek-Hub 4 节建议，剩余不足 30 % 的残片可丢弃或并入上一段。
+* 输出每行一条 JSON（`id/en/chinese`），方便流式读取。
+
+---
+
+## 4 . 批量处理多本书
+
+```python
+from glob import glob
+for zh_file in glob("txt_clean/*_zh.txt"):      # 你自己的命名规则
+    en_file = zh_file.replace("_zh.txt", "_en.txt")
+    out_file = zh_file.replace("_zh.txt", ".jsonl")
+    build_dataset(en_file, zh_file, out_file)
+```
+
+---
+
+## 5 . 结果检查与进阶
+
+| 检查点    | 做法                                                                |
+| ------ | ----------------------------------------------------------------- |
+| 对齐误差   | 随机抽 20 条，核对首末句含义；误差多 → 调高 `threshold` 或用词典+Hunalign ([GitHub][5]) |
+| 空白/乱码  | grep 或脚本统计 `len(en)==0 or len(zh)==0` 行数                          |
+| 长度分布   | 统计 `len(chinese)` 的均值/方差，确保集中在 8 k±10 %                           |
+| 模型推理验证 | 用现成 MT 评估模型打 BLEU/LASER 相似度，低分条复查                                 |
+
+如需更强制对齐，Hunalign（长度+词典）或 Vecalign、SimAlign 都能直接换进来而不影响后续拼段 ([Mokk][6], [GitHub][3])。
+
+---
+
+## 完整工作流回顾
+
+1. **清洗**：去控制符、折叠空行、繁→简；保证 UTF-8。
+2. **句级对齐**：LaBSE 嵌⼊ + Bertalign 动规，输出顺序一致句对。
+3. **8 k 拼段**：累加中文字数到阈值，生成 `(english, chinese)` 大片段。
+4. **格式化输出**：逐行 JSONL，字段 `id/english/chinese`；可直接 `jq` / `datasets` 读取。
+
+按此代码即可自动把多本中英译本批量切块，对齐生成可微调的数据集。若需进一步细化（如章级标题保留、特殊符号标准化），只要在 *clean\_txt()* 或 *build\_dataset()* 里插相应逻辑即可。祝构建顺利!
+
+[1]: https://huggingface.co/sentence-transformers/LaBSE?utm_source=chatgpt.com "sentence-transformers/LaBSE - Hugging Face"
+[2]: https://www.sbert.net/docs/sentence_transformer/pretrained_models.html?utm_source=chatgpt.com "Pretrained Models — Sentence Transformers documentation"
+[3]: https://github.com/bfsujason/bertalign?utm_source=chatgpt.com "bfsujason/bertalign: Multilingual sentence alignment using ... - GitHub"
+[4]: https://arxiv.org/abs/2301.12140?utm_source=chatgpt.com "Multilingual Sentence Transformer as A Multilingual Word Aligner"
+[5]: https://github.com/danielvarga/hunalign?utm_source=chatgpt.com "danielvarga/hunalign: Sentence aligner - GitHub"
+[6]: https://mokk.bme.hu/en/resources/hunalign/?utm_source=chatgpt.com "hunalign – sentence aligner | Média Oktató és Kutató Központ - BME"
+[7]: https://nessie.ilab.sztaki.hu/~kornai/Hunglish/src/hunalign/readme.html?utm_source=chatgpt.com "Hunalign"
+[8]: https://github.com/BYVoid/OpenCC?utm_source=chatgpt.com "BYVoid/OpenCC: Conversion between Traditional and ... - GitHub"
+[9]: https://github.com/yichen0831/opencc-python?utm_source=chatgpt.com "yichen0831/opencc-python - GitHub"
+[10]: https://aclanthology.org/2022.findings-emnlp.215.pdf?utm_source=chatgpt.com "[PDF] Multilingual Sentence Transformer as A Multilingual Word Aligner"
