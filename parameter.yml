@@ -1,0 +1,6 @@
+input_english_epub: /Users/xiaoyuwang/Desktop/Seek_Hub/english.epub
+input_chinese_epub: /Users/xiaoyuwang/Desktop/Seek_Hub/chinese.epub
+output_dir: dataset_alpaca
+chunk_size: 8000
+min_sentence_length: 2      # Minimum length for a sentence to be kept
+use_opencc: false           # Set true to enable traditional-to-simplified conversion (if needed)

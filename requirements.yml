@@ -1,0 +1,39 @@
+name: seek_hub_env
+channels:
+  - defaults
+  - conda-forge
+  - pytorch
+
+dependencies:
+  - python=3.10
+  - nltk
+  - beautifulsoup4
+  - lxml
+  - pyyaml
+  - regex
+  - tqdm
+  - sentence-transformers
+  - googletrans
+  - numba
+  #- faiss-gpu
+  # opencc is optional and only available via conda-forge
+  #- opencc  # conda install -c conda-forge opencc
+  # If you want GPU support, install pytorch as per https://pytorch.org/get-started/locally/
+  # Example: conda install pytorch torchvision torchaudio cpuonly -c pytorch
+  - pip
+  - pip:
+      - sentence-transformers==3.2.1
+      - ebooklib
+      - opencc
+      - numba==0.60.0
+      #faiss-cpu==1.7.2
+      #- faiss-gpu==1.7.2
+      - googletrans==4.0.0rc1
+      - sentence-splitter==1.4
+
+# Special install notes:
+# - opencc: conda install -c conda-forge opencc (or pip install opencc)
+# - tqdm: conda install -c conda-forge tqdm (already included above)
+# - If you want GPU for sentence-transformers: conda install pytorch torchvision torchaudio cpuonly -c pytorch
+# - bertalign: clone and install from source manually
+
