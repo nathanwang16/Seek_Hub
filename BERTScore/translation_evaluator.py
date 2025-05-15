@@ -3,8 +3,7 @@
 
 """
 翻译质量评估程序 - 使用BERTScore
-此程序接收中文和英文文本，评估翻译质量
-支持文件输入输出，适合处理长文本
+此程序接收中文和英文文本文件，评估翻译质量
 """
 
 import torch
@@ -26,7 +25,7 @@ class TranslationEvaluator:
         self.scorer = BERTScorer(
             model_type=model_type,
             lang="zh-en",  # 支持中英文
-            rescale_with_baseline=False,
+            rescale_with_baseline=False,  # 修改为False以避免基线文件问题
             device="cuda" if torch.cuda.is_available() else "cpu"
         )
         print(f"模型已加载，运行于 {self.scorer.device}")
@@ -86,11 +85,8 @@ class TranslationEvaluator:
 
 def main():
     parser = argparse.ArgumentParser(description="使用BERTScore评估中英文翻译质量")
-    parser.add_argument("--interactive", action="store_true", help="交互模式")
-    parser.add_argument("--chinese", type=str, help="中文文本")
-    parser.add_argument("--english", type=str, help="英文文本")
-    parser.add_argument("--chinese-file", type=str, help="包含中文文本的文件路径")
-    parser.add_argument("--english-file", type=str, help="包含英文文本的文件路径")
+    parser.add_argument("--chinese-file", type=str, required=True, help="包含中文文本的文件路径")
+    parser.add_argument("--english-file", type=str, required=True, help="包含英文文本的文件路径")
     parser.add_argument("--output", type=str, help="输出结果到文件")
     args = parser.parse_args()
     
@@ -102,110 +98,43 @@ def main():
         chinese_text = ""
         english_text = ""
         
-        if args.chinese_file:
-            if os.path.exists(args.chinese_file):
-                with open(args.chinese_file, 'r', encoding='utf-8') as f:
-                    chinese_text = f.read().strip()
-            else:
-                print(f"错误: 文件不存在 - {args.chinese_file}")
-                sys.exit(1)
-                
-        if args.english_file:
-            if os.path.exists(args.english_file):
-                with open(args.english_file, 'r', encoding='utf-8') as f:
-                    english_text = f.read().strip()
-            else:
-                print(f"错误: 文件不存在 - {args.english_file}")
-                sys.exit(1)
+        # 读取中文文件
+        if not os.path.exists(args.chinese_file):
+            print(f"错误: 文件不存在 - {args.chinese_file}")
+            sys.exit(1)
         
-        # 如果提供了命令行参数中的文本，使用命令行参数
-        if args.chinese:
-            chinese_text = args.chinese
+        with open(args.chinese_file, 'r', encoding='utf-8') as f:
+            chinese_text = f.read().strip()
             
-        if args.english:
-            english_text = args.english
+        # 读取英文文件
+        if not os.path.exists(args.english_file):
+            print(f"错误: 文件不存在 - {args.english_file}")
+            sys.exit(1)
+            
+        with open(args.english_file, 'r', encoding='utf-8') as f:
+            english_text = f.read().strip()
         
-        if args.interactive or (not chinese_text and not english_text):
-            # 交互模式
-            print("\n欢迎使用翻译质量评估工具\n")
-            print("请输入中文文本 (输入 'q' 退出):")
-            print("提示: 对于长文本，请使用 --chinese-file 和 --english-file 参数指定文件路径")
-            
-            while True:
-                print("\n中文文本 (或输入'file:'后跟文件路径): ", end="")
-                chinese_input = input()
-                if chinese_input.lower() == 'q':
-                    break
-                    
-                # 支持从文件读取
-                if chinese_input.startswith("file:"):
-                    file_path = chinese_input[5:].strip()
-                    try:
-                        with open(file_path, 'r', encoding='utf-8') as f:
-                            chinese_text = f.read().strip()
-                        print(f"已从文件 {file_path} 读取中文文本")
-                    except Exception as e:
-                        print(f"读取文件失败: {e}")
-                        continue
-                else:
-                    chinese_text = chinese_input
-                
-                print("英文文本 (或输入'file:'后跟文件路径): ", end="")
-                english_input = input()
-                if english_input.lower() == 'q':
-                    break
-                
-                # 支持从文件读取
-                if english_input.startswith("file:"):
-                    file_path = english_input[5:].strip()
-                    try:
-                        with open(file_path, 'r', encoding='utf-8') as f:
-                            english_text = f.read().strip()
-                        print(f"已从文件 {file_path} 读取英文文本")
-                    except Exception as e:
-                        print(f"读取文件失败: {e}")
-                        continue
-                else:
-                    english_text = english_input
-                
-                if not chinese_text or not english_text:
-                    print("错误: 两种语言的文本都必须提供")
-                    continue
-                
-                # 评估翻译质量
-                results = evaluator.evaluate(chinese_text, english_text)
-                
-                # 输出结果
-                print("\n评估结果:")
-                print(f"精确度 (Precision): {results['precision']:.4f}")
-                print(f"召回率 (Recall): {results['recall']:.4f}")
-                print(f"F1分数 (F1-Score): {results['f1']:.4f}")
-                print(f"质量评级: {evaluator.interpret_score(results['f1'])}")
-                print("\n" + "-" * 50)
-        else:
-            # 命令行参数模式
-            if not chinese_text or not english_text:
-                print("错误: 必须同时提供中文和英文文本")
-                print("可以使用 --chinese-file 和 --english-file 参数指定包含文本的文件路径")
-                sys.exit(1)
-                
-            # 评估翻译质量
-            results = evaluator.evaluate(chinese_text, english_text)
-            
-            # 输出结果
-            output_text = "\n评估结果:\n"
-            output_text += f"精确度 (Precision): {results['precision']:.4f}\n"
-            output_text += f"召回率 (Recall): {results['recall']:.4f}\n"
-            output_text += f"F1分数 (F1-Score): {results['f1']:.4f}\n"
-            output_text += f"质量评级: {evaluator.interpret_score(results['f1'])}"
-            
-            # 输出到文件或控制台
-            if args.output:
-                with open(args.output, 'w', encoding='utf-8') as f:
-                    f.write(output_text)
-                print(f"结果已保存到文件: {args.output}")
-            else:
-                print(output_text)
+        print(f"已读取中文文件: {args.chinese_file} ({len(chinese_text)} 字符)")
+        print(f"已读取英文文件: {args.english_file} ({len(english_text)} 字符)")
+        
+        # 评估翻译质量
+        results = evaluator.evaluate(chinese_text, english_text)
+        
+        # 输出结果
+        output_text = "\n评估结果:\n"
+        output_text += f"精确度 (Precision): {results['precision']:.4f}\n"
+        output_text += f"召回率 (Recall): {results['recall']:.4f}\n"
+        output_text += f"F1分数 (F1-Score): {results['f1']:.4f}\n"
+        output_text += f"质量评级: {evaluator.interpret_score(results['f1'])}"
+        
+        # 输出到文件或控制台
+        if args.output:
+            with open(args.output, 'w', encoding='utf-8') as f:
+                f.write(output_text)
+            print(f"结果已保存到文件: {args.output}")
+        
+        # 始终在控制台显示结果
+        print(output_text)
             
     except Exception as e:
         print(f"发生错误: {e}")
