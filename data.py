@@ -101,6 +101,8 @@ def epub_to_txt(epub_path: str, txt_path: str, postprocess_func):
 # ---------------- 文本清洗 ------------------
 _SENT_END = r"[.!?。！？]"
 _HEADER_THRESHOLD = 0.6
+# 注释符号模式
+_NOTE_SYMBOLS = r'[①②③④⑤⑥⑦⑧⑨⑩]|【\d+】|\[\d+\]|\(\d+\)'
 
 def postprocess(raw: str) -> str:
     logging.info(f"[{STAGE_EPUB_TO_TXT}] Post-processing text ({len(raw)} chars)")
@@ -115,7 +117,7 @@ def postprocess(raw: str) -> str:
     
     pat_page = re.compile(r"^\s*(?:Page\s*)?\d{1,4}\s*(?:页|Page)?\s*$")
     # 匹配注释符号开头的模式
-    pat_note = re.compile(r'^\s*(?:[①②③④⑤⑥⑦⑧⑨⑩]|【\d+】|\[\d+\]|\(\d+\))')
+    pat_note = re.compile(r'^\s*(?:' + _NOTE_SYMBOLS + r')')
     
     trimmed = [ln.strip() for ln in lines if ln.strip()]
     common  = {ln for ln, c in Counter(trimmed).items()
@@ -130,8 +132,25 @@ def postprocess(raw: str) -> str:
     logging.info(f"[{STAGE_EPUB_TO_TXT}] Removed {note_lines_removed} annotation lines starting with ①, 【1】, [1], etc.")
     logging.info(f"[{STAGE_EPUB_TO_TXT}] Retained {len(content_lines)} content lines after noise removal")
     
+    # 处理句子中间的注释符号 - 只删除符号本身
+    processed_lines = []
+    note_symbols_removed = 0
+    
+    for line in content_lines:
+        if line.strip():
+            # 替换句子中间的注释符号
+            original_len = len(line)
+            # 只替换符号本身，不删除后面的内容
+            line = re.sub(_NOTE_SYMBOLS, '', line)
+            note_symbols_removed += original_len - len(line)
+            processed_lines.append(line)
+        else:
+            processed_lines.append(line)  # 保留空行
+    
+    logging.info(f"[{STAGE_EPUB_TO_TXT}] Removed {note_symbols_removed} annotation symbols within text content")
+    
     merged, buf = [], ""
-    for ln in content_lines:
+    for ln in processed_lines:
         if not ln.strip():
             if buf:
                 merged.append(buf)
