@@ -114,15 +114,20 @@ def postprocess(raw: str) -> str:
     logging.info(f"[{STAGE_EPUB_TO_TXT}] Split into {len(lines)} lines")
     
     pat_page = re.compile(r"^\s*(?:Page\s*)?\d{1,4}\s*(?:页|Page)?\s*$")
+    # 匹配注释符号开头的模式
+    pat_note = re.compile(r'^\s*(?:[①②③④⑤⑥⑦⑧⑨⑩]|【\d+】|\[\d+\]|\(\d+\))')
+    
     trimmed = [ln.strip() for ln in lines if ln.strip()]
     common  = {ln for ln, c in Counter(trimmed).items()
                      if c > len(lines) * _HEADER_THRESHOLD and len(ln) < 80}
     logging.info(f"[{STAGE_EPUB_TO_TXT}] Identified {len(common)} common header/footer lines to remove")
     
     def is_noise(line: str) -> bool:
-        return pat_page.match(line) or line.strip() in common
+        return pat_page.match(line) or line.strip() in common or pat_note.match(line)
     
     content_lines = [ln for ln in lines if not is_noise(ln)]
+    note_lines_removed = len(lines) - len([ln for ln in lines if not (pat_page.match(ln) or ln.strip() in common)]) - len(content_lines)
+    logging.info(f"[{STAGE_EPUB_TO_TXT}] Removed {note_lines_removed} annotation lines starting with ①, 【1】, [1], etc.")
     logging.info(f"[{STAGE_EPUB_TO_TXT}] Retained {len(content_lines)} content lines after noise removal")
     
     merged, buf = [], ""
