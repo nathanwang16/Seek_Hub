@@ -1,0 +1,4 @@
+torch>=1.7.0
+numpy>=1.19.0
+bert-score>=0.3.11
+transformers>=4.0.0 

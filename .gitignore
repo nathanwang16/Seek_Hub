@@ -1,4 +1,6 @@
 dataset_alpaca/
 chinese.epub
 english.epub
-
+chinese_sample.txt
+english_sample.txt
+result.txt
