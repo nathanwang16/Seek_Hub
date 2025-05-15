@@ -1,0 +1,28 @@
+{
+  "citation": "",
+  "description": "",
+  "features": {
+    "en": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "zh": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "text": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "tok_len": {
+      "dtype": "int64",
+      "_type": "Value"
+    },
+    "noisy_en": {
+      "dtype": "string",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": ""
+}

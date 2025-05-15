@@ -1,12 +1,9 @@
-<<<<<<< HEAD
 torch>=1.7.0
 numpy>=1.19.0
 bert-score>=0.3.11
 transformers>=4.0.0 
-=======
 torch>=1.7.0
 numpy>=1.19.0
 bert-score>=0.3.11
 transformers>=4.9.0
 argparse>=1.4.0 
->>>>>>> origin/BERTScore调用

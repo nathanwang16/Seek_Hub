@@ -1,0 +1,4 @@
+en: books/english.txt
+zh: books/chinese.txt
+out: ./en_zh_book_ds
+max_chunk: 1800 
